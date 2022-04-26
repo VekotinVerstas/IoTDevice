@@ -1,6 +1,6 @@
 // NOTE:
 //
-// Copy this file to identity.h for your editin pleasure
+// Copy this file to identity.h for your editing pleasure
 //
 // The LoRaWAN frequency and the radio chip must be configured by running 'idf.py menuconfig'.
 // Go to Components / The Things Network, select the appropriate values and save.
