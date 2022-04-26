@@ -4,7 +4,7 @@ IoTDevice to send GPS location and button status via Lora
 
 https://github.com/manuelbl/ttn-esp32/wiki/Get-Started has decent docs for used lora library use. This is used mostly same way ;)
 
-In plaformio de something else ;)
+In plaformio do something else ;)
 
 In shell setup
 1. Install esp-idf ( https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/linux-macos-setup.html )
