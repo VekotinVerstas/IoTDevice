@@ -8,7 +8,7 @@ In plaformio do something else ;)
 
 In shell setup
 1. Install esp-idf ( https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/linux-macos-setup.html )
-2. git clone --recursive git://github.com/VekotinVerstas/IoTDevice.git 
+2. git clone --recursive git@github.com:VekotinVerstas/IoTDevice.git
 4. . ./export.sh at esp-idf dir to export esp-idf commands ( do not run in default shell init scrips as it messes up a lot [in python virtual])
 5. at main/ copy identity_example.h to identity.h and edit for your Lora keys 
 6. at project root ipd.py menuconfig
