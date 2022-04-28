@@ -16,3 +16,5 @@ In shell setup
 8. enjoy as everting always works not ;)
 
 This is at early dev state and likely to change all over
+
+UBlox config tool and https://github.com/VekotinVerstas/serialforward can be used to access Neo 6m GPS module in windows.
