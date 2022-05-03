@@ -44,8 +44,7 @@
 #include "identity.h"
 
 void uart_setup();
-void read_and_parse_nmea(void*);
-void led_strip_hsv2rgb(uint32_t h, uint32_t s, uint32_t v, uint32_t *r, uint32_t *g, uint32_t *b);
+time_t read_and_parse_nmea(void*);
 
 static const char *TAG = "IoTdeviceLed";
 
@@ -73,8 +72,11 @@ static const char *TAG = "IoTdeviceLed";
 static TheThingsNetwork ttn;
 const unsigned TX_INTERVAL = 60;
 const uint8_t loraMsgLen = 14;
+const uint8_t loraMaxRate = 4; // 4 msg / minute
 // This counter value is retained (in RTC memory) during deep sleep
 RTC_DATA_ATTR int counter_in_rtc_mem;
+RTC_DATA_ATTR time_t send_time_rtc;
+RTC_DATA_ATTR uint8_t send_count_rtc;
 
 // RTC functionality can be used in pins: 0,2,4,12-15,25-27,32-39.
 const gpio_num_t ext_wakeup_pin_1 = GPIO_NUM_4;
@@ -85,9 +87,9 @@ const gpio_num_t ext_wakeup_pin_3 = GPIO_NUM_15;
 const uint64_t ext_wakeup_pin_3_mask = 1ULL << ext_wakeup_pin_3;
 const gpio_num_t ext_wakeup_pin_4 = GPIO_NUM_13;
 const uint64_t ext_wakeup_pin_4_mask = 1ULL << ext_wakeup_pin_4;
-const gpio_num_t ext_wakeup_pin_5 = GPIO_NUM_14; // in final should be 13
+const gpio_num_t ext_wakeup_pin_5 = GPIO_NUM_14;
 const uint64_t ext_wakeup_pin_5_mask = 1ULL << ext_wakeup_pin_5;
-const gpio_num_t ext_wakeup_pin_6 = GPIO_NUM_38; // in final should be 13
+const gpio_num_t ext_wakeup_pin_6 = GPIO_NUM_38;
 const uint64_t ext_wakeup_pin_6_mask = 1ULL << ext_wakeup_pin_6;
 
 uint8_t buttons = 0b00000000;
@@ -105,8 +107,9 @@ extern "C" void app_main(void)
 {
     void* loraMsg;
     esp_err_t err;
+    time_t gpsTime=0;
 
-    //Led strip chan 2, pin 25, 8 leds
+    //Led strip chan 2, pin 25, 8 leds. Config at menuconfig
     ESP_LOGI(TAG, "LED start");
     led_strip_t* strip = led_strip_init(RMT_TX_CHANNEL, CONFIG_EXAMPLE_RMT_TX_GPIO, CONFIG_EXAMPLE_STRIP_LED_NUMBER);
     if (!strip) {
@@ -223,7 +226,7 @@ extern "C" void app_main(void)
     /* register event handler for NMEA parser library */
     //nmea_parser_add_handler(nmea_hdl, gps_event_handler, NULL);
     loraMsg = malloc(loraMsgLen);
-    read_and_parse_nmea(loraMsg);
+    gpsTime=read_and_parse_nmea(loraMsg);
     /*
 	loraMsg[0]=(uint8_t)gps->date.year;
 	loraMsg[1]=gps->date.month;
@@ -242,7 +245,25 @@ extern "C" void app_main(void)
 
     printf("Sending message...\n");
     counter_in_rtc_mem++;
-   
+    if( (gpsTime - send_time_rtc) < 60 ) // if less than minute from periods first send
+     {
+     send_count_rtc++;
+     if( send_count_rtc > loraMaxRate ) // Too many send requests 
+      {
+      // Wait until end of sending period
+      printf("Send delay...\n");
+      vTaskDelay(((gpsTime - send_time_rtc)*10000) / portTICK_RATE_MS);
+      // Start new period 
+      send_count_rtc = 1;
+      send_time_rtc = gpsTime;
+      }
+     }
+    else  // First send in period
+     {
+     // Start new period 
+     send_count_rtc = 1;
+     send_time_rtc = gpsTime;
+     }
     //sprintf(message, "IotDev %d", counter_in_rtc_mem);
     TTNResponseCode res = ttn.transmitMessage((uint8_t*)loraMsg, loraMsgLen);
     printf("Payload: ");
@@ -313,13 +334,14 @@ void uart_setup()
 }
 
 // Open UART to GPS module port and read and parse data
-void read_and_parse_nmea(void* nmeaData)
+time_t read_and_parse_nmea(void* nmeaData)
 {
     // Configure a temporary buffer for the incoming data
     char *buffer = (char*) malloc(GPS_UART_RX_BUF_SIZE + 1);
     char fmt_buf[32];
     size_t total_bytes = 0;
     int gotFix=0;
+    time_t aika=0;
 
     uart_setup();
     
@@ -405,7 +427,7 @@ void read_and_parse_nmea(void* nmeaData)
 		 printf("  Cardinal: %c\n", (char) posRMC->latitude.cardinal);
 		 //strftime(fmt_buf, sizeof(fmt_buf), "%d %b %T %Y", &posRMC->date_time);
 		 *(char*)(nmeaData+7)=(char)20;
-		 time_t aika = mktime(&posRMC->date_time);
+		 aika = mktime(&posRMC->date_time);
 		 printf("Date & Time: %lu\n", aika);
 		 *(int*)(nmeaData+8) = (int)aika;
 
@@ -482,4 +504,5 @@ void read_and_parse_nmea(void* nmeaData)
     }
     uart_driver_delete(GPS_UART_NUM);
     free(buffer);
+    return(aika);
 }
