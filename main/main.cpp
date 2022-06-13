@@ -82,26 +82,26 @@ RTC_DATA_ATTR uint8_t send_count_rtc;
 
 //External buttons
 const gpio_num_t ext_wakeup_pin_1 = GPIO_NUM_15;
-const uint64_t ext_wakeup_pin_1_mask = 1ULL << ext_wakeup_pin_3;
+const uint64_t ext_wakeup_pin_1_mask = 1ULL << ext_wakeup_pin_1;
 
 const gpio_num_t ext_wakeup_pin_2 = GPIO_NUM_35;
-const uint64_t ext_wakeup_pin_2_mask = 1ULL << ext_wakeup_pin_6;
+const uint64_t ext_wakeup_pin_2_mask = 1ULL << ext_wakeup_pin_2;
 
 const gpio_num_t ext_wakeup_pin_3 = GPIO_NUM_14;
-const uint64_t ext_wakeup_pin_3_mask = 1ULL << ext_wakeup_pin_5;
+const uint64_t ext_wakeup_pin_3_mask = 1ULL << ext_wakeup_pin_3;
 
 const gpio_num_t ext_wakeup_pin_4 = GPIO_NUM_13;
 const uint64_t ext_wakeup_pin_4_mask = 1ULL << ext_wakeup_pin_4;
 
 const gpio_num_t ext_wakeup_pin_5 = GPIO_NUM_2;
-const uint64_t ext_wakeup_pin_5_mask = 1ULL << ext_wakeup_pin_2;
+const uint64_t ext_wakeup_pin_5_mask = 1ULL << ext_wakeup_pin_5;
 
 const gpio_num_t ext_wakeup_pin_6 = GPIO_NUM_4;
-const uint64_t ext_wakeup_pin_6_mask = 1ULL << ext_wakeup_pin_1;
+const uint64_t ext_wakeup_pin_6_mask = 1ULL << ext_wakeup_pin_6;
 
 //Internal button. Not in use at normal build
 const gpio_num_t ext_wakeup_pin_x = GPIO_NUM_38;
-const uint64_t ext_wakeup_pin_x_mask = 1ULL << ext_wakeup_pin_6;
+const uint64_t ext_wakeup_pin_x_mask = 1ULL << ext_wakeup_pin_x;
 
 //Led pins
 const gpio_num_t ext_led_pin_1 = GPIO_NUM_32;
