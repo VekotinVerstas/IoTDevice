@@ -252,7 +252,8 @@ extern "C" void app_main(void)
       {
       // Wait until end of sending period
       printf("Send delay...\n");
-      vTaskDelay(((gpsTime - send_time_rtc)*10000) / portTICK_RATE_MS);
+      vTaskDelay(((gpsTime - send_time_rtc)*1000) / portTICK_RATE_MS);
+      printf("Send delay off...\n");
       // Start new period 
       send_count_rtc = 1;
       send_time_rtc = gpsTime;
