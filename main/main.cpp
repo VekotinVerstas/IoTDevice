@@ -79,18 +79,34 @@ RTC_DATA_ATTR time_t send_time_rtc;
 RTC_DATA_ATTR uint8_t send_count_rtc;
 
 // RTC functionality can be used in pins: 0,2,4,12-15,25-27,32-39.
-const gpio_num_t ext_wakeup_pin_1 = GPIO_NUM_4;
-const uint64_t ext_wakeup_pin_1_mask = 1ULL << ext_wakeup_pin_1;
-const gpio_num_t ext_wakeup_pin_2 = GPIO_NUM_2;
-const uint64_t ext_wakeup_pin_2_mask = 1ULL << ext_wakeup_pin_2;
-const gpio_num_t ext_wakeup_pin_3 = GPIO_NUM_15;
-const uint64_t ext_wakeup_pin_3_mask = 1ULL << ext_wakeup_pin_3;
+
+//External buttons
+const gpio_num_t ext_wakeup_pin_1 = GPIO_NUM_15;
+const uint64_t ext_wakeup_pin_1_mask = 1ULL << ext_wakeup_pin_3;
+
+const gpio_num_t ext_wakeup_pin_2 = GPIO_NUM_35;
+const uint64_t ext_wakeup_pin_2_mask = 1ULL << ext_wakeup_pin_6;
+
+const gpio_num_t ext_wakeup_pin_3 = GPIO_NUM_14;
+const uint64_t ext_wakeup_pin_3_mask = 1ULL << ext_wakeup_pin_5;
+
 const gpio_num_t ext_wakeup_pin_4 = GPIO_NUM_13;
 const uint64_t ext_wakeup_pin_4_mask = 1ULL << ext_wakeup_pin_4;
-const gpio_num_t ext_wakeup_pin_5 = GPIO_NUM_14;
-const uint64_t ext_wakeup_pin_5_mask = 1ULL << ext_wakeup_pin_5;
-const gpio_num_t ext_wakeup_pin_6 = GPIO_NUM_38;
-const uint64_t ext_wakeup_pin_6_mask = 1ULL << ext_wakeup_pin_6;
+
+const gpio_num_t ext_wakeup_pin_5 = GPIO_NUM_2;
+const uint64_t ext_wakeup_pin_5_mask = 1ULL << ext_wakeup_pin_2;
+
+const gpio_num_t ext_wakeup_pin_6 = GPIO_NUM_4;
+const uint64_t ext_wakeup_pin_6_mask = 1ULL << ext_wakeup_pin_1;
+
+//Internal button. Not in use at normal build
+const gpio_num_t ext_wakeup_pin_x = GPIO_NUM_38;
+const uint64_t ext_wakeup_pin_x_mask = 1ULL << ext_wakeup_pin_6;
+
+//Led pins
+const gpio_num_t ext_led_pin_1 = GPIO_NUM_32;
+const gpio_num_t ext_led_pin_2 = GPIO_NUM_33;
+
 
 uint8_t buttons = 0b00000000;
 
@@ -103,11 +119,32 @@ void messageReceived(const uint8_t *message, size_t length, ttn_port_t port)  //
     printf("\n");
 }
 
+void blink_task(void *pvParameter)
+{
+ gpio_pad_select_gpio(ext_led_pin_1);
+ gpio_set_direction (ext_led_pin_1,GPIO_MODE_OUTPUT);
+ gpio_pad_select_gpio(ext_led_pin_2);
+ gpio_set_direction (ext_led_pin_2,GPIO_MODE_OUTPUT);
+
+ while(1)
+  {
+    gpio_set_level(ext_led_pin_1,0);
+    gpio_set_level(ext_led_pin_2,1);
+    vTaskDelay(1000/portTICK_RATE_MS);
+    gpio_set_level(ext_led_pin_1,1);
+    gpio_set_level(ext_led_pin_2,0);
+    vTaskDelay(1000/portTICK_RATE_MS);
+  }
+}
+
 extern "C" void app_main(void)
 {
     void* loraMsg;
     esp_err_t err;
     time_t gpsTime=0;
+
+    //Prosess for conrolling state of the two eternal led's
+    xTaskCreate(&blink_task, "blink_task", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 
     //Led strip chan 2, pin 25, 8 leds. Config at menuconfig
     ESP_LOGI(TAG, "LED start");
@@ -190,6 +227,9 @@ extern "C" void app_main(void)
 		     break;
 		   case ext_wakeup_pin_5:
 		     buttons |= (1 << 4);;
+		     break;
+		   case ext_wakeup_pin_6:
+		     buttons |= (1 << 5);;
 		     break;
 		     //default:
 		     // default statements
@@ -295,18 +335,21 @@ extern "C" void app_main(void)
     rtc_gpio_pullup_dis(ext_wakeup_pin_4);
     rtc_gpio_pulldown_en(ext_wakeup_pin_5);
     rtc_gpio_pullup_dis(ext_wakeup_pin_5);
+    rtc_gpio_pulldown_en(ext_wakeup_pin_6);
+    rtc_gpio_pullup_dis(ext_wakeup_pin_6);
     
     // RTC domain needs to be on during sleep GPIO int to work. This keeps ULP side cpu running thus externel pulldown might be the thing.
     ESP_ERROR_CHECK( esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON) );
 
 
-    printf("Enabling EXT1 wakeup on pins GPIO%d, GPIO%d, GPIO%d, GPIO%d, GPIO%d\n", ext_wakeup_pin_1, ext_wakeup_pin_2, ext_wakeup_pin_3, ext_wakeup_pin_4, ext_wakeup_pin_5);
+    printf("Enabling EXT1 wakeup on pins GPIO%d, GPIO%d, GPIO%d, GPIO%d, GPIO%d, GPIO%d\n", ext_wakeup_pin_1, ext_wakeup_pin_2, ext_wakeup_pin_3, ext_wakeup_pin_4, ext_wakeup_pin_5, ext_wakeup_pin_6);
     /*RTC functionality can be used in pins: 0,2,4,12-15,25-27,32-39.
     ESP_EXT1_WAKEUP_ALL_LOW: wake up when all selected GPIOs are low
     ESP_EXT1_WAKEUP_ANY_HIGH: wake up when any of the selected GPIOs is high*/
-    ESP_ERROR_CHECK( esp_sleep_enable_ext1_wakeup(ext_wakeup_pin_1_mask | ext_wakeup_pin_2_mask | ext_wakeup_pin_3_mask | ext_wakeup_pin_4_mask | ext_wakeup_pin_5_mask, ESP_EXT1_WAKEUP_ANY_HIGH) ); // Normal production buttons ( internal button can not be here )
+    ESP_ERROR_CHECK( esp_sleep_enable_ext1_wakeup(ext_wakeup_pin_1_mask | ext_wakeup_pin_2_mask | ext_wakeup_pin_3_mask | ext_wakeup_pin_4_mask | ext_wakeup_pin_5_mask | ext_wakeup_pin_6_mask, ESP_EXT1_WAKEUP_ANY_HIGH) ); // Normal production buttons ( internal button can not be here )
 
-    ESP_ERROR_CHECK( esp_sleep_enable_ext1_wakeup(ext_wakeup_pin_6_mask, ESP_EXT1_WAKEUP_ALL_LOW) ); //For demo use with internal button ( it has wrong polarity for normal ESP_EXT1_WAKEUP_ANY_HIGH ).
+    //Internal button
+    //ESP_ERROR_CHECK( esp_sleep_enable_ext1_wakeup(ext_wakeup_pin_x_mask, ESP_EXT1_WAKEUP_ALL_LOW) ); //For demo use with internal button ( it has wrong polarity for normal ESP_EXT1_WAKEUP_ANY_HIGH ).
     
     // Schedule wake up
     //esp_sleep_enable_timer_wakeup(TX_INTERVAL * 1000000LL);
