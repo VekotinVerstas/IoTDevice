@@ -11,9 +11,8 @@ In shell setup
 2. git clone --recursive git@github.com:VekotinVerstas/IoTDevice.git
 4. . ./export.sh at esp-idf dir to export esp-idf commands ( do not run in default shell init scrips as it messes up a lot [in python virtual])
 5. at main/ copy identity_example.h to identity.h and edit for your Lora keys 
-6. at project root ipd.py menuconfig
-7. at project root idf.py build flash monitor ( or supset of options )
-8. enjoy as everting always works not ;)
+6. at project root iun "idf.py menuconfig" to initialize config
+7. at project root run "idf.py build flash monitor" ( or supset of options to build, flash and monitor the device code )
 
 This is at early dev state and likely to change all over
 
