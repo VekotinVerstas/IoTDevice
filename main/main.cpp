@@ -148,7 +148,7 @@ extern "C" void app_main(void)
     esp_err_t err;
     time_t gpsTime=0;
 
-    //Prosess for conrolling state of the eternal led's
+    //Prosess for conrolling state of the external led's
     xTaskCreate(&blink_task, "blink_task", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 
     //Led strip chan 2, pin 25, 8 leds. Config at menuconfig
