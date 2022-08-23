@@ -107,7 +107,6 @@ const uint64_t ext_wakeup_pin_x_mask = 1ULL << ext_wakeup_pin_x;
 const gpio_num_t ext_led_pin_1 = GPIO_NUM_32;
 const gpio_num_t ext_led_pin_2 = GPIO_NUM_33;
 
-
 uint8_t buttons = 0b00000000;
 
 //Lora return message
@@ -121,11 +120,14 @@ void messageReceived(const uint8_t *message, size_t length, ttn_port_t port)  //
 
 void blink_task(void *pvParameter)
 {
+ uint8_t color = 10;
  gpio_pad_select_gpio(ext_led_pin_1);
  gpio_set_direction (ext_led_pin_1,GPIO_MODE_OUTPUT);
  gpio_pad_select_gpio(ext_led_pin_2);
  gpio_set_direction (ext_led_pin_2,GPIO_MODE_OUTPUT);
-
+ 
+ ESP_LOGI(TAG, "LED start");
+ 
  while(1)
   {
     gpio_set_level(ext_led_pin_1,0);
@@ -134,6 +136,9 @@ void blink_task(void *pvParameter)
     gpio_set_level(ext_led_pin_1,1);
     gpio_set_level(ext_led_pin_2,0);
     vTaskDelay(1000/portTICK_RATE_MS);
+    if(color>=30) color=10;
+    else color++;
+    //ESP_LOGI(TAG, "LED done");
   }
 }
 
@@ -143,30 +148,27 @@ extern "C" void app_main(void)
     esp_err_t err;
     time_t gpsTime=0;
 
-    //Prosess for conrolling state of the two eternal led's
+    //Prosess for conrolling state of the eternal led's
     xTaskCreate(&blink_task, "blink_task", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 
     //Led strip chan 2, pin 25, 8 leds. Config at menuconfig
-    ESP_LOGI(TAG, "LED start");
     led_strip_t* strip = led_strip_init(RMT_TX_CHANNEL, CONFIG_EXAMPLE_RMT_TX_GPIO, CONFIG_EXAMPLE_STRIP_LED_NUMBER);
-    if (!strip) {
-        ESP_LOGE(TAG, "install WS2812 driver failed");
-    }
+    if (!strip)
+     {
+     ESP_LOGE(TAG, "install WS2812 driver failed");
+     }
     // Clear LED strip (turn off all LEDs)
     ESP_ERROR_CHECK(strip->clear(strip, 100));
 
     // Set some leds ( just to show that it works, needs plan what to do with leds
-    strip->set_pixel(strip, 0, 30, 0, 0);
-    strip->set_pixel(strip, 1, 0, 30, 0);
-    strip->set_pixel(strip, 2, 0, 0, 30);
-    strip->set_pixel(strip, 3, 30, 0, 0);
-    strip->set_pixel(strip, 4, 0, 30, 0);
-    strip->set_pixel(strip, 5, 0, 0, 30);
-    
+    strip->set_pixel(strip, 0, 10, 0, 0);
+    //strip->set_pixel(strip, 1, 0, 30, 0);
+    //strip->set_pixel(strip, 2, 0, 0, 30);
+    //strip->set_pixel(strip, 3, 30, 0, 0);
+    //strip->set_pixel(strip, 4, 0, 30, 0);
+    //strip->set_pixel(strip, 5, 0, 0, 30);
     // Flush RGB values to LEDs
     ESP_ERROR_CHECK(strip->refresh(strip, 100));
-    ESP_LOGI(TAG, "LED done");
-    //LEDSTRIP end
 
     // Initialize the GPIO ISR handler service
     err = gpio_install_isr_service(ESP_INTR_FLAG_IRAM);
