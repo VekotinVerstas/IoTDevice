@@ -80,7 +80,7 @@ RTC_DATA_ATTR uint8_t send_count_rtc;
 const gpio_num_t ext_wakeup_pin_1 = GPIO_NUM_39; //external pulldown
 const uint64_t ext_wakeup_pin_1_mask = 1ULL << ext_wakeup_pin_1;
 
-const gpio_num_t ext_wakeup_pin_2 = GPIO_NUM_35; //external pulldown
+const gpio_num_t ext_wakeup_pin_2 = GPIO_NUM_15;
 const uint64_t ext_wakeup_pin_2_mask = 1ULL << ext_wakeup_pin_2;
 
 const gpio_num_t ext_wakeup_pin_3 = GPIO_NUM_14;
