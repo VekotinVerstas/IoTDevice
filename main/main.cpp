@@ -38,8 +38,6 @@
 #include <gpgsv.h>
 
 #include <freertos/task.h>
-#include <driver/rmt.h>
-#include <led_strip.h>
 #include "sdkconfig.h"
 #include "identity.h"
 
@@ -48,7 +46,6 @@ time_t read_and_parse_nmea(void*);
 
 static const char *TAG = "IoTdeviceLed";
 
-#define RMT_TX_CHANNEL RMT_CHANNEL_2
 
 // Pins and other resources
 #define TTN_SPI_HOST      HSPI_HOST
@@ -67,8 +64,6 @@ static const char *TAG = "IoTdeviceLed";
 #define GPS_UART_TX_PIN         12
 #define GPS_UART_RX_BUF_SIZE    (1024)
 
-// LedStrip pin 25 set in menuconfig
-
 static TheThingsNetwork ttn;
 const unsigned TX_INTERVAL = 60;
 const uint8_t loraMsgLen = 14;
@@ -78,13 +73,14 @@ RTC_DATA_ATTR int counter_in_rtc_mem;
 RTC_DATA_ATTR time_t send_time_rtc;
 RTC_DATA_ATTR uint8_t send_count_rtc;
 
+//GPIOs 5,12,15,16,17,18,19,26,27,(33),(35) are used for board control functions and should not be used for other purposes unless you exactly know what you are doing.
 // RTC functionality can be used in pins: 0,2,4,12-15,25-27,32-39.
-
+// Inputonly pins ( no internal pullups ) GPIO 34,35,36,39
 //External buttons
-const gpio_num_t ext_wakeup_pin_1 = GPIO_NUM_15;
+const gpio_num_t ext_wakeup_pin_1 = GPIO_NUM_39; //external pulldown
 const uint64_t ext_wakeup_pin_1_mask = 1ULL << ext_wakeup_pin_1;
 
-const gpio_num_t ext_wakeup_pin_2 = GPIO_NUM_35;
+const gpio_num_t ext_wakeup_pin_2 = GPIO_NUM_35; //external pulldown
 const uint64_t ext_wakeup_pin_2_mask = 1ULL << ext_wakeup_pin_2;
 
 const gpio_num_t ext_wakeup_pin_3 = GPIO_NUM_14;
@@ -96,7 +92,7 @@ const uint64_t ext_wakeup_pin_4_mask = 1ULL << ext_wakeup_pin_4;
 const gpio_num_t ext_wakeup_pin_5 = GPIO_NUM_2;
 const uint64_t ext_wakeup_pin_5_mask = 1ULL << ext_wakeup_pin_5;
 
-const gpio_num_t ext_wakeup_pin_6 = GPIO_NUM_4;
+const gpio_num_t ext_wakeup_pin_6 = GPIO_NUM_36; // external pulldown
 const uint64_t ext_wakeup_pin_6_mask = 1ULL << ext_wakeup_pin_6;
 
 //Internal button. Not in use at normal build
@@ -104,8 +100,9 @@ const gpio_num_t ext_wakeup_pin_x = GPIO_NUM_38;
 const uint64_t ext_wakeup_pin_x_mask = 1ULL << ext_wakeup_pin_x;
 
 //Led pins
-const gpio_num_t ext_led_pin_1 = GPIO_NUM_32;
-const gpio_num_t ext_led_pin_2 = GPIO_NUM_33;
+const gpio_num_t ext_led_pin_1 = GPIO_NUM_25;
+const gpio_num_t ext_led_pin_2 = GPIO_NUM_32; 
+const gpio_num_t ext_led_pin_3 = GPIO_NUM_4;
 
 uint8_t buttons = 0b00000000;
 
@@ -118,29 +115,6 @@ void messageReceived(const uint8_t *message, size_t length, ttn_port_t port)  //
     printf("\n");
 }
 
-void blink_task(void *pvParameter)
-{
- uint8_t color = 10;
- gpio_pad_select_gpio(ext_led_pin_1);
- gpio_set_direction (ext_led_pin_1,GPIO_MODE_OUTPUT);
- gpio_pad_select_gpio(ext_led_pin_2);
- gpio_set_direction (ext_led_pin_2,GPIO_MODE_OUTPUT);
- 
- ESP_LOGI(TAG, "LED start");
- 
- while(1)
-  {
-    gpio_set_level(ext_led_pin_1,0);
-    gpio_set_level(ext_led_pin_2,1);
-    vTaskDelay(1000/portTICK_RATE_MS);
-    gpio_set_level(ext_led_pin_1,1);
-    gpio_set_level(ext_led_pin_2,0);
-    vTaskDelay(1000/portTICK_RATE_MS);
-    if(color>=30) color=10;
-    else color++;
-    //ESP_LOGI(TAG, "LED done");
-  }
-}
 
 extern "C" void app_main(void)
 {
@@ -148,28 +122,25 @@ extern "C" void app_main(void)
     esp_err_t err;
     time_t gpsTime=0;
 
-    //Prosess for conrolling state of the external led's
-    xTaskCreate(&blink_task, "blink_task", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+    gpio_reset_pin(ext_led_pin_1);
+    gpio_set_direction (ext_led_pin_1,GPIO_MODE_OUTPUT);
 
-    //Led strip chan 2, pin 25, 8 leds. Config at menuconfig
-    led_strip_t* strip = led_strip_init(RMT_TX_CHANNEL, CONFIG_EXAMPLE_RMT_TX_GPIO, CONFIG_EXAMPLE_STRIP_LED_NUMBER);
-    if (!strip)
-     {
-     ESP_LOGE(TAG, "install WS2812 driver failed");
-     }
-    // Clear LED strip (turn off all LEDs)
-    ESP_ERROR_CHECK(strip->clear(strip, 100));
+    gpio_reset_pin(ext_led_pin_2);
+    gpio_set_direction (ext_led_pin_2,GPIO_MODE_OUTPUT);
 
-    // Set some leds ( just to show that it works, needs plan what to do with leds
-    strip->set_pixel(strip, 0, 10, 0, 0);
-    //strip->set_pixel(strip, 1, 0, 30, 0);
-    //strip->set_pixel(strip, 2, 0, 0, 30);
-    //strip->set_pixel(strip, 3, 30, 0, 0);
-    //strip->set_pixel(strip, 4, 0, 30, 0);
-    //strip->set_pixel(strip, 5, 0, 0, 30);
-    // Flush RGB values to LEDs
-    ESP_ERROR_CHECK(strip->refresh(strip, 100));
+    gpio_reset_pin(ext_led_pin_3);
+    gpio_set_direction (ext_led_pin_3,GPIO_MODE_OUTPUT);
 
+    //    while(1){
+    gpio_set_level(ext_led_pin_1,0);
+    gpio_set_level(ext_led_pin_2,1);
+    gpio_set_level(ext_led_pin_3,1);
+    //vTaskDelay(5000 / portTICK_PERIOD_MS);
+    //gpio_set_level(ext_led_pin_1,1);
+    //gpio_set_level(ext_led_pin_2,1);
+    //gpio_set_level(ext_led_pin_3,1);
+    //vTaskDelay(5000 / portTICK_PERIOD_MS);
+    //}
     // Initialize the GPIO ISR handler service
     err = gpio_install_isr_service(ESP_INTR_FLAG_IRAM);
     ESP_ERROR_CHECK(err);
@@ -315,10 +286,19 @@ extern "C" void app_main(void)
      printf("%02x", *(((uint8_t*)loraMsg)+cp));
      }
     printf("\n");
-    printf(res == kTTNSuccessfulTransmission ? "%d bytes sent.\n" : "Transmission failed.\n", loraMsgLen);
+    //printf(res == kTTNSuccessfulTransmission ? "%d bytes sent.\n" : "Transmission failed.\n", loraMsgLen);
+    if(res == kTTNSuccessfulTransmission)
+     {
+     printf("%d bytes sent.\n", loraMsgLen);
+     gpio_set_level(ext_led_pin_3,0);
+     }
+    else
+     {
+     printf("Transmission failed.\n");
+     }
     buttons=0;
     free(loraMsg);
-    
+
     // Wait until TTN communication is idle and save state
     ttn.waitForIdle();
     ttn.prepareForDeepSleep();
@@ -339,11 +319,19 @@ extern "C" void app_main(void)
     rtc_gpio_pullup_dis(ext_wakeup_pin_5);
     rtc_gpio_pulldown_en(ext_wakeup_pin_6);
     rtc_gpio_pullup_dis(ext_wakeup_pin_6);
-    
+
     // RTC domain needs to be on during sleep GPIO int to work. This keeps ULP side cpu running thus externel pulldown might be the thing.
     ESP_ERROR_CHECK( esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON) );
 
-
+    //DELAY and switch off send ok led
+    vTaskDelay(2000 / portTICK_RATE_MS);
+    gpio_set_level(ext_led_pin_3,1);
+    //Enable deep sleep hold for led GPIOs
+    gpio_hold_en(ext_led_pin_1);
+    gpio_hold_en(ext_led_pin_2);
+    gpio_hold_en(ext_led_pin_3);
+    gpio_deep_sleep_hold_en();
+    
     printf("Enabling EXT1 wakeup on pins GPIO%d, GPIO%d, GPIO%d, GPIO%d, GPIO%d, GPIO%d\n", ext_wakeup_pin_1, ext_wakeup_pin_2, ext_wakeup_pin_3, ext_wakeup_pin_4, ext_wakeup_pin_5, ext_wakeup_pin_6);
     /*RTC functionality can be used in pins: 0,2,4,12-15,25-27,32-39.
     ESP_EXT1_WAKEUP_ALL_LOW: wake up when all selected GPIOs are low
@@ -359,7 +347,6 @@ extern "C" void app_main(void)
     //Go to sleep
     printf("Going to deep sleep...\n");
     esp_deep_sleep_start();
-    //vTaskDelay(60000 / portTICK_RATE_MS);
 }
 
 void uart_setup()
@@ -454,6 +441,7 @@ time_t read_and_parse_nmea(void* nmeaData)
                 nmea_gprmc_s *posRMC = (nmea_gprmc_s *) data;
 		if( posRMC->valid )
 		 {
+		 gpio_set_level(ext_led_pin_2,0);
 		 gotFix=1;
 		 printf("Longitude:\n");
 		 printf("  Degrees: %d\n", posRMC->longitude.degrees); //int 4 bytes
@@ -488,6 +476,7 @@ time_t read_and_parse_nmea(void* nmeaData)
 	    else
 	     {
 	     printf("GPRMC no valid fix!\n");
+	     gpio_set_level(ext_led_pin_2,1);
 	     }
 	    /*
             if (NMEA_GPGSA == data->type) {
