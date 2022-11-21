@@ -100,8 +100,8 @@ const gpio_num_t ext_wakeup_pin_x = GPIO_NUM_38;
 const uint64_t ext_wakeup_pin_x_mask = 1ULL << ext_wakeup_pin_x;
 
 //Led pins
-const gpio_num_t ext_led_pin_1 = GPIO_NUM_25;
-const gpio_num_t ext_led_pin_2 = GPIO_NUM_32; 
+const gpio_num_t ext_led_pin_1 = GPIO_NUM_32;
+const gpio_num_t ext_led_pin_2 = GPIO_NUM_25; 
 const gpio_num_t ext_led_pin_3 = GPIO_NUM_4;
 
 uint8_t buttons = 0b00000000;
